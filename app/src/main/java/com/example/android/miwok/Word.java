@@ -19,16 +19,19 @@ public class Word {
     /** Icon for the word*/
     private int wordImageId = NO_IMAGE_PROVIDED;
 
-    public Word(String miwok, String english, int wordImageId){
+    private int audioFileId = -1;
+
+    public Word(String miwok, String english, int wordImageId, int audioFileId){
         this.mMiwokTranslation = miwok;
         this.mDefaultTranslation = english;
         this.wordImageId = wordImageId;
+        this.audioFileId = audioFileId;
     }
 
-    public Word(String miwok, String english){
+    public Word(String miwok, String english, int audioFileId){
         this.mMiwokTranslation = miwok;
         this.mDefaultTranslation = english;
-        this.wordImageId = wordImageId;
+        this.audioFileId = audioFileId;
     }
 
     /**
@@ -48,6 +51,10 @@ public class Word {
     }
 
 
+    public int getAudioFileId() {
+        return audioFileId;
+    }
+
     /**
      *
      * @return Image Id
@@ -59,4 +66,9 @@ public class Word {
     public boolean hasImage(){
         return this.wordImageId != NO_IMAGE_PROVIDED;
     }
+
+    public boolean hasAudio(){
+        return this.audioFileId != NO_IMAGE_PROVIDED;
+    }
+
 }
