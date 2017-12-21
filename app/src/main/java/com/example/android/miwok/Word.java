@@ -71,4 +71,13 @@ public class Word {
         return this.audioFileId != NO_IMAGE_PROVIDED;
     }
 
+    @Override
+    public String toString() {
+        return "Word{" +
+                "mDefaultTranslation='" + mDefaultTranslation + '\'' +
+                ", mMiwokTranslation='" + mMiwokTranslation + '\'' +
+                ", wordImageId=" + wordImageId +
+                ", audioFileId=" + audioFileId +
+                '}';
+    }
 }

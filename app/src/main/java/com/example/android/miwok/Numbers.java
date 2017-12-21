@@ -1,11 +1,14 @@
 package com.example.android.miwok;
 
+import android.content.Context;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -14,10 +17,39 @@ import java.util.ArrayList;
 
 public class Numbers extends AppCompatActivity {
 
+    static MediaPlayer mp;
+
+    private AudioManager audioManager;
+
+    AudioManager.OnAudioFocusChangeListener afChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+        @Override
+        public void onAudioFocusChange(int focusChange) {
+            if(focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK){
+                mp.pause();
+                mp.seekTo(0);
+            }else if(focusChange == AudioManager.AUDIOFOCUS_GAIN){
+                mp.start();
+
+            }else if(focusChange == AudioManager.AUDIOFOCUS_LOSS){
+                releaseMediaPlayer();
+            }
+
+        }
+    };
+
+    private MediaPlayer.OnCompletionListener mCompletionLister = new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mediaPlayer) {
+            releaseMediaPlayer();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.word_list);
+
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         // List of words
         final ArrayList<Word> words = new ArrayList<>();
@@ -33,25 +65,6 @@ public class Numbers extends AppCompatActivity {
         words.add(new Word("wo'e", "nine", R.drawable.number_nine, R.raw.number_nine));
         words.add(new Word("na'aacha", "ten", R.drawable.number_ten, R.raw.number_ten));
 
-        /*
-        for (int i = 0; i <10 ; i++) {
-            Log.v("NumbersActivity", "Word at index "+i+" :"+ words.get(i));
-        }
-        */
-        // The Root View
-//        LinearLayout rootView = (LinearLayout)findViewById(R.id.rootView);
-
-        /*
-        // Loop to add list items to Root view
-        for (String word : words) {
-            TextView wordView = new TextView(this, null, R.style.CategoryStyle);
-            String str = word.toLowerCase();
-            String strCap = str.substring(0, 1).toUpperCase() + str.substring(1);
-            wordView.setText(strCap);
-            rootView.addView(wordView);
-        }
-        */
-
         final WordAdapter adapter = new WordAdapter(this, words, R.color.category_numbers);
 
         final ListView listView = (ListView) findViewById(R.id.list);
@@ -61,18 +74,40 @@ public class Numbers extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                final MediaPlayer mp;
-                mp = MediaPlayer.create(getApplicationContext(), words.get(i).getAudioFileId());
-                mp.start();
+                Word w = words.get(i);
+                Log.v("NumbersActivity", w.toString());
 
-                mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mediaPlayer) {
-                        mediaPlayer.release();
-                    }
-                });
+                int result = audioManager.requestAudioFocus(afChangeListener,
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+
+                releaseMediaPlayer();
+
+                if(result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
+                    mp = MediaPlayer.create(getApplicationContext(), w.getAudioFileId());
+                    mp.start();
+
+                    mp.setOnCompletionListener(mCompletionLister);
+                }
 
             }
         });
+    }
+
+    private void releaseMediaPlayer() {
+        if(mp != null){
+            mp.release();
+
+            mp = null;
+
+            audioManager.abandonAudioFocus(afChangeListener);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        releaseMediaPlayer();
+
     }
 }

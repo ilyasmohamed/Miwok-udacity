@@ -1,9 +1,12 @@
 package com.example.android.miwok;
 
+import android.content.Context;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -12,10 +15,40 @@ import java.util.ArrayList;
 
 public class Family extends AppCompatActivity {
 
+    static MediaPlayer mp;
+
+    private AudioManager audioManager;
+
+    AudioManager.OnAudioFocusChangeListener afChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+        @Override
+        public void onAudioFocusChange(int focusChange) {
+            if(focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK){
+                mp.pause();
+                mp.seekTo(0);
+            }else if(focusChange == AudioManager.AUDIOFOCUS_GAIN){
+                mp.start();
+
+            }else if(focusChange == AudioManager.AUDIOFOCUS_LOSS){
+                releaseMediaPlayer();
+            }
+
+        }
+    };
+
+    private MediaPlayer.OnCompletionListener mCompletionLister = new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mediaPlayer) {
+            releaseMediaPlayer();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.word_list);
+
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
 
 
         // List of words
@@ -41,17 +74,40 @@ public class Family extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                final MediaPlayer mp;
-                mp = MediaPlayer.create(getApplicationContext(), words.get(i).getAudioFileId());
-                mp.start();
+                Word w = words.get(i);
+                Log.v("FamilyActivity", w.toString());
 
-                mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mediaPlayer) {
-                        mediaPlayer.release();
-                    }
-                });
+                releaseMediaPlayer();
+
+                int result = audioManager.requestAudioFocus(afChangeListener,
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+
+
+                if(result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
+                    mp = MediaPlayer.create(getApplicationContext(), w.getAudioFileId());
+                    mp.start();
+
+                    mp.setOnCompletionListener(mCompletionLister);
+                }
             }
         });
+    }
+
+    private void releaseMediaPlayer() {
+        if(mp != null){
+            mp.release();
+
+            mp = null;
+        }
+
+        audioManager.abandonAudioFocus(afChangeListener);
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        releaseMediaPlayer();
     }
 }
